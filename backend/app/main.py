@@ -4,9 +4,32 @@ import os
 import shutil
 from app.core.rag_logic import RAGService
 from app.services.document_loader import DocumentLoaderService
+from app.services.cleanup_service import CleanupService
 from pydantic import BaseModel
+import asyncio
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="Enterprise RAG Knowledge Assistant")
+# Initialize Services
+rag_service = RAGService()
+doc_loader = DocumentLoaderService()
+cleanup_service = CleanupService(
+    data_dir="./data",
+    vector_store_dir="./vector_store",
+    rag_service=rag_service,
+    interval_minutes=10
+)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start the background cleanup task
+    asyncio.create_task(cleanup_service.start_cleanup_loop())
+    yield
+    # Shutdown logic (if any) can go here
+
+app = FastAPI(
+    title="Enterprise RAG Knowledge Assistant",
+    lifespan=lifespan
+)
 
 # CORS Configuration
 app.add_middleware(
@@ -16,10 +39,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize Services
-rag_service = RAGService()
-doc_loader = DocumentLoaderService()
 
 UPLOAD_DIR = "./data"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
