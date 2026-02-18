@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000';
+const API_URL = window.location.origin; // Dynamically use the same origin as the frontend
 
 const fileUpload = document.getElementById('file-upload');
 const uploadStatus = document.getElementById('upload-status');

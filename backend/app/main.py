@@ -1,5 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import os
 import shutil
 from typing import Optional
@@ -50,9 +52,22 @@ class QueryRequest(BaseModel):
     api_key: Optional[str] = None
     ollama_model: Optional[str] = "mistral"
 
+# Mount frontend static files
+# When deployed, the frontend folder will be accessible
+app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+
 @app.get("/")
 async def root():
-    return {"message": "Enterprise RAG API is running"}
+    return FileResponse("../frontend/index.html")
+
+# Specialized mapping for style.css and script.js if needed, or just let them be loaded via /static/
+@app.get("/style.css")
+async def get_css():
+    return FileResponse("../frontend/style.css")
+
+@app.get("/script.js")
+async def get_js():
+    return FileResponse("../frontend/script.js")
 
 @app.get("/list-files")
 async def list_files():
