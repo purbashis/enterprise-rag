@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# RAG Data (Private)
+backend/data/*
+backend/vector_store/*
+
+# Node (if any)
+node_modules/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db

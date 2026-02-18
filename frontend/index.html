@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise RAG Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <button id="sidebar-toggle" class="mobile-only toggle-btn">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <div id="sidebar-overlay" class="overlay"></div>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="logo">
+                <span class="logo-icon">💠</span>
+                <h1>RAG Assistant</h1>
+            </div>
+
+            <div class="upload-section">
+                <h2>Knowledge Base</h2>
+                <label for="file-upload" class="upload-btn">
+                    <span>➕ Upload Document</span>
+                    <input type="file" id="file-upload" accept=".pdf,.txt" hidden>
+                </label>
+                <div id="upload-status" class="status-msg"></div>
+                <div id="file-list" class="file-list">
+                    <!-- Dynamic file list -->
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="api-status">
+                    <span class="status-dot online"></span>
+                    <span>Backend: Online</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="chat-header">
+                <div class="header-info">
+                    <h2>Knowledge Assistant</h2>
+                    <p>Ask anything about your uploaded documents</p>
+                </div>
+            </header>
+
+            <div id="chat-messages" class="chat-messages">
+                <div class="message assistant">
+                    <div class="bubble">
+                        Hello! I am your Enterprise Knowledge Assistant. Upload some documents to the left, and I'll
+                        help you find information within them.
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <form id="query-form">
+                    <input type="text" id="query-input" placeholder="Ask a question..." autocomplete="off">
+                    <button type="submit" id="send-btn">
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

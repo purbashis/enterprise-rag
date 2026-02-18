@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: rag-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false # Set this in Render Dashboard
+      - key: MODEL_NAME
+        value: llama-3.3-70b-versatile
+      - key: EMBEDDING_MODEL
+        value: all-MiniLM-L6-v2
+      - key: VECTOR_STORE_PATH
+        value: ./vector_store
+      - key: DATA_PATH
+        value: ./data
