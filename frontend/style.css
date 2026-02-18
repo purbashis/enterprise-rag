@@ -56,13 +56,109 @@ body {
     letter-spacing: -0.025em;
 }
 
+.upload-section,
+.settings-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.settings-section h2,
 .upload-section h2 {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    color: var(--text-muted);
     margin-bottom: 16px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-header h2 {
+    margin-bottom: 0;
+}
+
+.control-group {
+    margin-bottom: 12px;
+}
+
+.control-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+select,
+input[type="password"] {
+    width: 100%;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    color: white;
+    font-size: 0.875rem;
+    outline: none;
+}
+
+select option {
+    background: var(--sidebar-bg);
+}
+
+.hidden {
+    display: none;
+}
+
+.text-btn {
+    background: none;
+    border: none;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+
+.text-btn.danger {
+    color: #ef4444;
+}
+
+.text-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+}
+
+.delete-file-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.delete-file-btn:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .upload-btn {

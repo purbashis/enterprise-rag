@@ -13,14 +13,33 @@ load_dotenv()
 class RAGService:
     def __init__(self):
         self.embeddings = HuggingFaceEmbeddings(model_name=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"))
-        self.llm = ChatGroq(
-            temperature=0,
-            model_name=os.getenv("MODEL_NAME", "llama-3.3-70b-versatile"),
-            api_key=os.getenv("GROQ_API_KEY")
-        )
         self.vector_store_path = os.getenv("VECTOR_STORE_PATH", "./vector_store")
         self.vector_store: Optional[FAISS] = None
         self._load_vector_store()
+
+    def _get_llm(self, provider: str = "groq", api_key: Optional[str] = None):
+        """Factory method to get the requested LLM."""
+        if provider == "local":
+            # Assuming Ollama is running locally
+            from langchain_community.chat_models import ChatOllama
+            return ChatOllama(model="llama3", base_url="http://localhost:11434")
+        
+        elif provider == "custom":
+            if not api_key:
+                raise ValueError("Custom API key is required.")
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(
+                api_key=api_key,
+                model="gpt-3.5-turbo", # Default or allow configuration
+                temperature=0
+            )
+
+        else: # Default: Groq
+            return ChatGroq(
+                temperature=0,
+                model_name=os.getenv("MODEL_NAME", "llama-3.3-70b-versatile"),
+                api_key=api_key or os.getenv("GROQ_API_KEY")
+            )
 
     def _load_vector_store(self):
         """Loads FAISS vector store if it exists."""
@@ -42,11 +61,12 @@ class RAGService:
         
         self.vector_store.save_local(self.vector_store_path)
 
-    def get_rag_chain(self):
+    def get_rag_chain(self, provider: str = "groq", api_key: Optional[str] = None):
         """Creates and returns the RAG chain."""
         if self.vector_store is None:
             raise ValueError("Vector store is empty. Please upload documents first.")
 
+        llm = self._get_llm(provider, api_key)
         retriever = self.vector_store.as_retriever(search_kwargs={"k": 3})
 
         system_prompt = (
@@ -68,11 +88,28 @@ class RAGService:
         question_answer_chain = create_stuff_documents_chain(self.llm, prompt)
         return create_retrieval_chain(retriever, question_answer_chain)
 
-    def query(self, question: str):
+    def query(self, question: str, provider: str = "groq", api_key: Optional[str] = None):
         """Query the RAG system."""
-        chain = self.get_rag_chain()
+        chain = self.get_rag_chain(provider, api_key)
         response = chain.invoke({"input": question})
         return {
             "answer": response["answer"],
             "sources": [doc.metadata.get("source", "unknown") for doc in response["context"]]
         }
+
+    def delete_document(self, filename: str):
+        """Removes a document from the FAISS index by source metadata."""
+        if self.vector_store:
+            # Note: FAISS doesn't directly support deleting by metadata easily in all versions.
+            # A common workaround is to recreate the index excluding the target source.
+            docs = self.vector_store.docstore._dict.values()
+            remaining_chunks = [d for d in docs if d.metadata.get("source") != filename]
+            
+            if not remaining_chunks:
+                self.vector_store = None
+                if os.path.exists(self.vector_store_path):
+                    import shutil
+                    shutil.rmtree(self.vector_store_path)
+            else:
+                self.vector_store = FAISS.from_documents(remaining_chunks, self.embeddings)
+                self.vector_store.save_local(self.vector_store_path)

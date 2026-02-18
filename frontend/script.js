@@ -5,6 +5,11 @@ const uploadStatus = document.getElementById('upload-status');
 const queryForm = document.getElementById('query-form');
 const queryInput = document.getElementById('query-input');
 const chatMessages = document.getElementById('chat-messages');
+const fileList = document.getElementById('file-list');
+const modelProvider = document.getElementById('model-provider');
+const customKeyGroup = document.getElementById('custom-key-group');
+const customApiKey = document.getElementById('custom-api-key');
+const clearAllBtn = document.getElementById('clear-all-btn');
 
 // Sidebar Toggle logic
 const sidebar = document.getElementById('sidebar');
@@ -20,16 +25,83 @@ function toggleSidebar() {
 toggleBtn.addEventListener('click', toggleSidebar);
 overlay.addEventListener('click', toggleSidebar);
 
+// Provider Selection logic
+modelProvider.addEventListener('change', () => {
+    if (modelProvider.value === 'custom') {
+        customKeyGroup.classList.remove('hidden');
+    } else {
+        customKeyGroup.classList.add('hidden');
+    }
+});
+
+// Load existing files on start
+async function loadFiles() {
+    try {
+        const response = await fetch(`${API_URL}/list-files`);
+        const data = await response.json();
+        renderFileList(data.files);
+    } catch (error) {
+        console.error('Failed to load files:', error);
+    }
+}
+
+function renderFileList(files) {
+    fileList.innerHTML = '';
+    files.forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.innerHTML = `
+            <span class="file-name" title="${file}">${file}</span>
+            <button class="delete-file-btn" onclick="deleteFile('${file}')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12"></path>
+                </svg>
+            </button>
+        `;
+        fileList.appendChild(item);
+    });
+}
+
+window.deleteFile = async (filename) => {
+    if (!confirm(`Delete ${filename}?`)) return;
+    try {
+        const response = await fetch(`${API_URL}/delete/${filename}`, { method: 'DELETE' });
+        if (response.ok) {
+            loadFiles();
+            addMessage('assistant', `Deleted document: ${filename}`);
+        }
+    } catch (error) {
+        console.error('Delete failed:', error);
+    }
+};
+
+clearAllBtn.addEventListener('click', async () => {
+    if (!confirm('This will delete ALL documents and clear the Knowledge Base. Continue?')) return;
+    try {
+        const response = await fetch(`${API_URL}/reset`, { method: 'POST' });
+        if (response.ok) {
+            loadFiles();
+            chatMessages.innerHTML = `
+                <div class="message assistant">
+                    <div class="bubble">Knowledge base and chat cleared. How can I help you today?</div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Reset failed:', error);
+    }
+});
+
 // Handle File Upload
 fileUpload.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     uploadStatus.textContent = 'Uploading and indexing...';
     uploadStatus.className = 'status-msg loading';
+
+    const formData = new FormData();
+    formData.append('file', file);
 
     try {
         const response = await fetch(`${API_URL}/upload`, {
@@ -40,6 +112,7 @@ fileUpload.addEventListener('change', async (e) => {
         if (response.ok) {
             uploadStatus.textContent = 'File indexed successfully!';
             uploadStatus.className = 'status-msg success';
+            loadFiles();
             addMessage('assistant', `I've successfully indexed "${file.name}". You can now ask questions about it.`);
         } else {
             const error = await response.json();
@@ -67,7 +140,11 @@ queryForm.addEventListener('submit', async (e) => {
         const response = await fetch(`${API_URL}/query`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question })
+            body: JSON.stringify({
+                question,
+                provider: modelProvider.value,
+                api_key: customApiKey.value || null
+            })
         });
 
         if (response.ok) {
@@ -101,7 +178,7 @@ function updateMessage(msgDiv, text, sources = []) {
 
     if (sources && sources.length > 0) {
         const sourcesDiv = document.createElement('div');
-        sourcesDiv.className = 'message-sources';
+        sourcesDiv.className = 'sources'; // Match existing CSS
         const uniqueSources = [...new Set(sources)];
         sourcesDiv.textContent = `Sources: ${uniqueSources.join(', ')}`;
         msgDiv.appendChild(sourcesDiv);
@@ -109,3 +186,6 @@ function updateMessage(msgDiv, text, sources = []) {
 
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
+// Initial load
+loadFiles();
