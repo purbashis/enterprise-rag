@@ -9,6 +9,8 @@ const fileList = document.getElementById('file-list');
 const modelProvider = document.getElementById('model-provider');
 const customKeyGroup = document.getElementById('custom-key-group');
 const customApiKey = document.getElementById('custom-api-key');
+const localModelGroup = document.getElementById('local-model-group');
+const localModelName = document.getElementById('local-model-name');
 const clearAllBtn = document.getElementById('clear-all-btn');
 
 // Sidebar Toggle logic
@@ -27,10 +29,13 @@ overlay.addEventListener('click', toggleSidebar);
 
 // Provider Selection logic
 modelProvider.addEventListener('change', () => {
+    customKeyGroup.classList.add('hidden');
+    localModelGroup.classList.add('hidden');
+
     if (modelProvider.value === 'custom') {
         customKeyGroup.classList.remove('hidden');
-    } else {
-        customKeyGroup.classList.add('hidden');
+    } else if (modelProvider.value === 'local') {
+        localModelGroup.classList.remove('hidden');
     }
 });
 
@@ -143,7 +148,8 @@ queryForm.addEventListener('submit', async (e) => {
             body: JSON.stringify({
                 question,
                 provider: modelProvider.value,
-                api_key: customApiKey.value || null
+                api_key: customApiKey.value || null,
+                ollama_model: localModelName.value || 'mistral'
             })
         });
 

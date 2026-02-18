@@ -17,12 +17,12 @@ class RAGService:
         self.vector_store: Optional[FAISS] = None
         self._load_vector_store()
 
-    def _get_llm(self, provider: str = "groq", api_key: Optional[str] = None):
+    def _get_llm(self, provider: str = "groq", api_key: Optional[str] = None, ollama_model: str = "mistral"):
         """Factory method to get the requested LLM."""
         if provider == "local":
             # Assuming Ollama is running locally
             from langchain_community.chat_models import ChatOllama
-            return ChatOllama(model="llama3", base_url="http://localhost:11434")
+            return ChatOllama(model=ollama_model, base_url="http://localhost:11434")
         
         elif provider == "custom":
             if not api_key:
@@ -61,12 +61,12 @@ class RAGService:
         
         self.vector_store.save_local(self.vector_store_path)
 
-    def get_rag_chain(self, provider: str = "groq", api_key: Optional[str] = None):
+    def get_rag_chain(self, provider: str = "groq", api_key: Optional[str] = None, ollama_model: str = "mistral"):
         """Creates and returns the RAG chain."""
         if self.vector_store is None:
             raise ValueError("Vector store is empty. Please upload documents first.")
 
-        llm = self._get_llm(provider, api_key)
+        llm = self._get_llm(provider, api_key, ollama_model)
         retriever = self.vector_store.as_retriever(search_kwargs={"k": 3})
 
         system_prompt = (
@@ -85,12 +85,12 @@ class RAGService:
             ]
         )
 
-        question_answer_chain = create_stuff_documents_chain(self.llm, prompt)
+        question_answer_chain = create_stuff_documents_chain(llm, prompt)
         return create_retrieval_chain(retriever, question_answer_chain)
 
-    def query(self, question: str, provider: str = "groq", api_key: Optional[str] = None):
+    def query(self, question: str, provider: str = "groq", api_key: Optional[str] = None, ollama_model: str = "mistral"):
         """Query the RAG system."""
-        chain = self.get_rag_chain(provider, api_key)
+        chain = self.get_rag_chain(provider, api_key, ollama_model)
         response = chain.invoke({"input": question})
         return {
             "answer": response["answer"],

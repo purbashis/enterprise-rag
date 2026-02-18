@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import shutil
+from typing import Optional
 from app.core.rag_logic import RAGService
 from app.services.document_loader import DocumentLoaderService
 from app.services.cleanup_service import CleanupService
@@ -47,6 +48,7 @@ class QueryRequest(BaseModel):
     question: str
     provider: Optional[str] = "groq"
     api_key: Optional[str] = None
+    ollama_model: Optional[str] = "mistral"
 
 @app.get("/")
 async def root():
@@ -106,7 +108,12 @@ async def reset_all():
 async def query_rag(request: QueryRequest):
     """Answers questions based on indexed documents with specific models."""
     try:
-        result = rag_service.query(request.question, request.provider, request.api_key)
+        result = rag_service.query(
+            request.question, 
+            request.provider, 
+            request.api_key,
+            request.ollama_model
+        )
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
