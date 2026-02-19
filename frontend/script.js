@@ -12,6 +12,8 @@ const customApiKey = document.getElementById('custom-api-key');
 const localModelGroup = document.getElementById('local-model-group');
 const localModelName = document.getElementById('local-model-name');
 const clearAllBtn = document.getElementById('clear-all-btn');
+const statusDot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
 
 // Sidebar Toggle logic
 const sidebar = document.getElementById('sidebar');
@@ -193,5 +195,25 @@ function updateMessage(msgDiv, text, sources = []) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// Health Check logic
+async function checkHealth() {
+    try {
+        const response = await fetch(`${API_URL}/`);
+        if (response.ok) {
+            statusDot.classList.add('online');
+            statusText.textContent = 'Backend: Online';
+        } else {
+            throw new Error('Offline');
+        }
+    } catch (error) {
+        statusDot.classList.remove('online');
+        statusText.textContent = 'Backend: Offline';
+    }
+}
+
 // Initial load
 loadFiles();
+checkHealth();
+
+// Check health every 30 seconds
+setInterval(checkHealth, 30000);

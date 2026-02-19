@@ -214,6 +214,9 @@ select option {
     width: 8px;
     height: 8px;
     border-radius: 50%;
+    background-color: #6b7280;
+    /* Default gray/offline */
+    transition: all 0.3s ease;
 }
 
 .status-dot.online {
