@@ -1,7 +1,8 @@
 import '../style.css';
 import { FileListResponse, LLMProvider, QueryResponse, UploadResponse } from './types.ts';
 
-const API_URL = window.location.origin;
+// Use localhost:8000 for local dev if running on Vite port 5173, otherwise use same origin
+const API_URL = window.location.port === '5173' ? 'http://localhost:8000' : window.location.origin;
 
 // DOM Elements
 const fileUpload = document.getElementById('file-upload') as HTMLInputElement;
