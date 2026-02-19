@@ -9,8 +9,11 @@
     --border: #1f2937;
     --bubble-assistant: #1f2937;
     --bubble-user: #4f46e5;
-    --glass: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-hover: rgba(255, 255, 255, 0.08);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.2);
     --mobile-header-height: 60px;
 }
 
@@ -100,10 +103,18 @@ input[type="password"] {
     background: var(--glass);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 8px;
+    padding: 10px 12px;
     color: white;
     font-size: 0.875rem;
     outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+select:focus,
+input[type="password"]:focus,
+input[type="text"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
 }
 
 select option {
@@ -142,6 +153,25 @@ select option {
     border-radius: 8px;
     margin-bottom: 8px;
     font-size: 0.875rem;
+    animation: slideIn 0.3s ease-out forwards;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.file-item:hover {
+    transform: translateX(4px);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 .delete-file-btn {
@@ -283,11 +313,21 @@ select option {
 .assistant .bubble {
     background-color: var(--bubble-assistant);
     border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
 }
 
 .user .bubble {
     background-color: var(--bubble-user);
     color: white;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+}
+
+.message {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.message:hover {
+    transform: scale(1.01);
 }
 
 .message-sources {
