@@ -11,6 +11,7 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    APP_ENV=production \
     FRONTEND_DIST=/app/frontend/dist \
     DATA_PATH=/app/data \
     VECTOR_STORE_PATH=/app/vector_store \

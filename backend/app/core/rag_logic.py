@@ -137,10 +137,14 @@ class RAGService:
     def delete_document(self, filename: str):
         """Removes a document from the FAISS index by source metadata."""
         if self.vector_store:
-            # Note: FAISS doesn't directly support deleting by metadata easily in all versions.
-            # A common workaround is to recreate the index excluding the target source.
-            docs = self.vector_store.docstore._dict.values()
-            remaining_chunks = [d for d in docs if d.metadata.get("source") != filename]
+            docs = list(self.vector_store.docstore._dict.values())
+            remaining_chunks = [
+                document
+                for document in docs
+                if document.metadata.get("source") != filename
+            ]
+            if len(remaining_chunks) == len(docs):
+                return
             
             if not remaining_chunks:
                 self.vector_store = None
@@ -148,5 +152,7 @@ class RAGService:
                     import shutil
                     shutil.rmtree(self.vector_store_path)
             else:
-                self.vector_store = FAISS.from_documents(remaining_chunks, self.embeddings)
+                self.vector_store = FAISS.from_documents(
+                    remaining_chunks, self._get_embeddings()
+                )
                 self.vector_store.save_local(self.vector_store_path)

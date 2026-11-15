@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import os
 import shutil
 import uuid
@@ -14,6 +15,9 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
+APP_ENV = os.getenv("APP_ENV", "development").lower()
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = Path(os.getenv("DATA_PATH", BACKEND_DIR / "data")).resolve()
@@ -156,6 +160,7 @@ async def upload_document(file: UploadFile = File(...)):
         chunks = await asyncio.to_thread(doc_loader.process_file, str(file_path))
         for chunk in chunks:
             chunk.metadata["source"] = filename
+        await asyncio.to_thread(rag_service.delete_document, filename)
         await asyncio.to_thread(rag_service.add_documents, chunks)
         await memory_agent.store(
             key=f"document:{filename}",
@@ -171,7 +176,13 @@ async def upload_document(file: UploadFile = File(...)):
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     except Exception as error:
-        raise HTTPException(status_code=500, detail="Document indexing failed.") from error
+        logger.exception("Document indexing failed for %s", filename)
+        detail = (
+            f"Document indexing failed: {error}"
+            if APP_ENV == "development"
+            else "Document indexing failed. Check backend logs."
+        )
+        raise HTTPException(status_code=500, detail=detail) from error
     finally:
         await file.close()
 

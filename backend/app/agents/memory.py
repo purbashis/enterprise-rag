@@ -44,9 +44,7 @@ class LongTermMemoryAgent:
             connection.close()
 
     async def initialize(self) -> None:
-        if self._initialized:
-            return
-
+        first_initialization = not self._initialized
         with self._connection() as connection:
             connection.execute(
                 """
@@ -61,7 +59,8 @@ class LongTermMemoryAgent:
                 """
             )
         self._initialized = True
-        logger.info("SQLite memory store ready at %s", self._database_path)
+        if first_initialization:
+            logger.info("SQLite memory store ready at %s", self._database_path)
 
     async def store(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         await self.initialize()
