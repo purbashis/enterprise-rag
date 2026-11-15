@@ -12,41 +12,78 @@ load_dotenv()
 
 class RAGService:
     def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(model_name=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"))
+        self.embeddings: Optional[HuggingFaceEmbeddings] = None
         self.vector_store_path = os.getenv("VECTOR_STORE_PATH", "./vector_store")
         self.vector_store: Optional[FAISS] = None
         self._load_vector_store()
 
-    def _get_llm(self, provider: str = "groq", api_key: Optional[str] = None, ollama_model: str = "mistral"):
+    def _get_embeddings(self) -> HuggingFaceEmbeddings:
+        if self.embeddings is None:
+            self.embeddings = HuggingFaceEmbeddings(
+                model_name=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+            )
+        return self.embeddings
+
+    def _get_llm(self, provider: str = "local", api_key: Optional[str] = None, ollama_model: str = "qwen2.5:3b"):
         """Factory method to get the requested LLM."""
         if provider == "local":
-            # Assuming Ollama is running locally
-            from langchain_community.chat_models import ChatOllama
-            return ChatOllama(model=ollama_model, base_url="http://localhost:11434")
-        
-        elif provider == "custom":
-            if not api_key:
-                raise ValueError("Custom API key is required.")
-            from langchain_openai import ChatOpenAI
-            return ChatOpenAI(
-                api_key=api_key,
-                model="gpt-3.5-turbo", # Default or allow configuration
-                temperature=0
+            from langchain_ollama import ChatOllama
+            return ChatOllama(
+                model=ollama_model,
+                base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
             )
 
-        else: # Default: Groq
+        if provider == "groq":
             return ChatGroq(
                 temperature=0,
-                model_name=os.getenv("MODEL_NAME", "llama-3.3-70b-versatile"),
+                model=os.getenv("MODEL_NAME", "llama-3.3-70b-versatile"),
                 api_key=api_key or os.getenv("GROQ_API_KEY")
             )
+
+        raise ValueError("Provider must be 'local' or 'groq'.")
+
+    def generate(
+        self,
+        prompt: str,
+        provider: str = "local",
+        api_key: Optional[str] = None,
+        ollama_model: str = "qwen2.5:3b",
+    ) -> str:
+        """Generate text without requiring an indexed document collection."""
+        response = self._get_llm(provider, api_key, ollama_model).invoke(prompt)
+        content = response.content
+        if not isinstance(content, str):
+            return str(content)
+        return content
+
+    def retrieve_context(self, question: str, limit: int = 3) -> dict:
+        """Return relevant document excerpts without invoking an LLM."""
+        if self.vector_store is None:
+            return {"documents": [], "sources": []}
+
+        documents = self.vector_store.similarity_search(question, k=limit)
+        return {
+            "documents": [
+                {
+                    "content": document.page_content,
+                    "source": document.metadata.get("source", "unknown"),
+                }
+                for document in documents
+            ],
+            "sources": list(
+                dict.fromkeys(
+                    document.metadata.get("source", "unknown")
+                    for document in documents
+                )
+            ),
+        }
 
     def _load_vector_store(self):
         """Loads FAISS vector store if it exists."""
         if os.path.exists(os.path.join(self.vector_store_path, "index.faiss")):
             self.vector_store = FAISS.load_local(
-                self.vector_store_path, 
-                self.embeddings, 
+                self.vector_store_path,
+                self._get_embeddings(),
                 allow_dangerous_deserialization=True
             )
         else:
@@ -55,13 +92,13 @@ class RAGService:
     def add_documents(self, chunks):
         """Adds document chunks to the vector store and saves it."""
         if self.vector_store is None:
-            self.vector_store = FAISS.from_documents(chunks, self.embeddings)
+            self.vector_store = FAISS.from_documents(chunks, self._get_embeddings())
         else:
             self.vector_store.add_documents(chunks)
         
         self.vector_store.save_local(self.vector_store_path)
 
-    def get_rag_chain(self, provider: str = "groq", api_key: Optional[str] = None, ollama_model: str = "mistral"):
+    def get_rag_chain(self, provider: str = "local", api_key: Optional[str] = None, ollama_model: str = "qwen2.5:3b"):
         """Creates and returns the RAG chain."""
         if self.vector_store is None:
             raise ValueError("Vector store is empty. Please upload documents first.")
@@ -88,7 +125,7 @@ class RAGService:
         question_answer_chain = create_stuff_documents_chain(llm, prompt)
         return create_retrieval_chain(retriever, question_answer_chain)
 
-    def query(self, question: str, provider: str = "groq", api_key: Optional[str] = None, ollama_model: str = "mistral"):
+    def query(self, question: str, provider: str = "local", api_key: Optional[str] = None, ollama_model: str = "qwen2.5:3b"):
         """Query the RAG system."""
         chain = self.get_rag_chain(provider, api_key, ollama_model)
         response = chain.invoke({"input": question})

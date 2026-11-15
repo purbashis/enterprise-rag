@@ -1,5 +1,7 @@
-const API_URL = window.location.origin; // Dynamically use the same origin as the frontend
+/* Multi-Agent RAG Frontend */
+const API_URL = window.location.origin;
 
+// DOM Elements
 const fileUpload = document.getElementById('file-upload');
 const uploadStatus = document.getElementById('upload-status');
 const queryForm = document.getElementById('query-form');
@@ -37,6 +39,10 @@ modelProvider.addEventListener('change', () => {
     if (modelProvider.value === 'custom') {
         customKeyGroup.classList.remove('hidden');
     } else if (modelProvider.value === 'local') {
+        localModelGroup.classList.remove('hidden');
+    } else if (modelProvider.value === 'agent') {
+        // Multi-agent mode
+        customKeyGroup.classList.remove('hidden');
         localModelGroup.classList.remove('hidden');
     }
 });
@@ -132,7 +138,95 @@ fileUpload.addEventListener('change', async (e) => {
     }
 });
 
-// Handle Query Submission
+// ===== Multi-Agent Functions =====
+
+// Web Search
+async function performWebSearch(query) {
+    try {
+        const response = await fetch(`${API_URL}/agent/web-search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                task: 'web_search',
+                context: { query, max_results: 5 }
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            addMessage('assistant', `Web Search Results:`, true);
+            addMessage('assistant', JSON.stringify(data.result.results, null, 2), false);
+        } else {
+            const error = await response.json();
+            addMessage('assistant', `Web search failed: ${error.detail}`, true);
+        }
+    } catch (err) {
+        addMessage('assistant', 'Failed to connect to web search agent.', true);
+    }
+}
+
+// API Call
+async function performApiCall(endpoint, method = 'GET', payload = null) {
+    try {
+        const response = await fetch(`${API_URL}/agent/api-call`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                task: 'api_call',
+                context: { endpoint, method, payload }
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            addMessage('assistant', `API Call Result:`, true);
+            addMessage('assistant', JSON.stringify(data.result.body || data.result, null, 2), false);
+        } else {
+            const error = await response.json();
+            addMessage('assistant', `API call failed: ${error.detail}`, true);
+        }
+    } catch (err) {
+        addMessage('assistant', 'Failed to connect to API agent.', true);
+    }
+}
+
+// Memory Query
+async function performMemoryQuery(query, sessionId = null) {
+    try {
+        const response = await fetch(`${API_URL}/agent/memory-query`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                query,
+                session_id: sessionId
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.result.matches.length > 0) {
+                addMessage('assistant', `Memory Query Results for: "${query}":`, true);
+                data.result.matches.forEach(match => {
+                    const formatted = typeof match.value === 'object'
+                        ? JSON.stringify(match.value, null, 2)
+                        : String(match.value);
+                    addMessage('assistant', `Key: ${match.key} (score: ${match.score.toFixed(2)})`, false);
+                    addMessage('assistant', formatted, false);
+                });
+            } else {
+                addMessage('assistant', `No memories found for: "${query}"`, true);
+            }
+        } else {
+            const error = await response.json();
+            addMessage('assistant', `Memory query failed: ${error.detail}`, true);
+        }
+    } catch (err) {
+        addMessage('assistant', 'Failed to connect to memory agent.', true);
+    }
+}
+
+// ===== Query Submission =====
+
 queryForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const question = queryInput.value.trim();
@@ -151,13 +245,20 @@ queryForm.addEventListener('submit', async (e) => {
                 question,
                 provider: modelProvider.value,
                 api_key: customApiKey.value || null,
-                ollama_model: localModelName.value || 'mistral'
+                ollama_model: localModelName.value || 'mistral',
+                use_agents: modelProvider.value === 'agent'
             })
         });
 
         if (response.ok) {
             const data = await response.json();
             updateMessage(loadingBubble, data.answer, data.sources);
+
+            // If agent mode was used, also show memory/external results
+            if (modelProvider.value === 'agent' && data.use_agents) {
+                // Store the interaction in memory
+                // (Already handled in the backend)
+            }
         } else {
             const error = await response.json();
             updateMessage(loadingBubble, `Error: ${error.detail}`);
@@ -167,7 +268,7 @@ queryForm.addEventListener('submit', async (e) => {
     }
 });
 
-function addMessage(type, text) {
+function addMessage(type, text, showSources = false) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${type}`;
 
@@ -186,7 +287,7 @@ function updateMessage(msgDiv, text, sources = []) {
 
     if (sources && sources.length > 0) {
         const sourcesDiv = document.createElement('div');
-        sourcesDiv.className = 'sources'; // Match existing CSS
+        sourcesDiv.className = 'sources';
         const uniqueSources = [...new Set(sources)];
         sourcesDiv.textContent = `Sources: ${uniqueSources.join(', ')}`;
         msgDiv.appendChild(sourcesDiv);
@@ -198,7 +299,7 @@ function updateMessage(msgDiv, text, sources = []) {
 // Health Check logic
 async function checkHealth() {
     try {
-        const response = await fetch(`${API_URL}/`);
+        const response = await fetch(`${API_URL}/health`);
         if (response.ok) {
             statusDot.classList.add('online');
             statusText.textContent = 'Backend: Online';

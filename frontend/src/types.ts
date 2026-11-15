@@ -1,14 +1,17 @@
-export type LLMProvider = 'groq' | 'local' | 'custom';
+export type LLMProvider = 'local' | 'groq';
 
-export interface QueryRequest {
-    question: string;
-    provider: LLMProvider;
-    api_key?: string | null;
-    ollama_model?: string;
+export interface WorkflowStep {
+    agent: string;
+    status: string;
+    result?: unknown;
 }
 
-export interface QueryResponse {
+export interface WorkflowResponse {
+    workflow_id: string;
+    session_id: string;
+    goal: string;
     answer: string;
+    steps: WorkflowStep[];
     sources: string[];
 }
 
@@ -19,9 +22,4 @@ export interface FileListResponse {
 export interface UploadResponse {
     message: string;
     chunks: number;
-}
-
-export interface StatusMsg {
-    text: string;
-    type: 'loading' | 'success' | 'error' | '';
 }

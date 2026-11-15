@@ -1,0 +1,10 @@
+.git
+.vscode
+**/__pycache__
+**/node_modules
+**/.venv
+**/venv
+backend/.env
+backend/data
+backend/vector_store
+frontend/dist
